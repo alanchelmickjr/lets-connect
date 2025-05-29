@@ -175,7 +175,7 @@ async def transcribe_audio(audio_file: UploadFile = File(...)):
         }
         
         data = {
-            "model": AZURE_TRANSCRIPTION_MODEL
+            "model": os.environ.get('AZURE_TRANSCRIPTION_MODEL')
         }
         
         # Make request to Azure OpenAI
