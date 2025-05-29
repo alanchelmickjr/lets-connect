@@ -246,9 +246,9 @@ We love feedback! Share your thoughts in our [Discussions](https://github.com/yo
 
 <div align="center">
 
-🏆 **"Most Innovative Networking App 2025"** - TechCrunch Disrupt  
-🌟 **"Best AI Implementation"** - Product Hunt  
-🚀 **"Future of Business Networking"** - Forbes Tech  
+🏆 **"Most Innovative Networking App 2025"** - ** 
+🌟 **"Best AI Implementation"** - **
+🚀 **"Future of Business Networking"** -** 
 
 </div>
 
@@ -257,7 +257,7 @@ We love feedback! Share your thoughts in our [Discussions](https://github.com/yo
 ## 📊 The Numbers Don't Lie
 
 <div align="center">
-
+** SAMPLE TESTING IN PROGRESS **
 | Metric | Traditional Networking | Let's Connect |
 |:---:|:---:|:---:|
 | **Time to Connect** | 5-10 minutes | 30 seconds |
@@ -272,7 +272,7 @@ We love feedback! Share your thoughts in our [Discussions](https://github.com/yo
 
 ---
 
-## 🌟 Testimonials from Real Users
+## 🌟 Testimonials from Ai's imagination as we build Users
 
 > *"I used to dread networking events. Now I actually look forward to them! Let's Connect makes meeting people feel natural and follow-up automatic."*  
 > **- Jessica Chen, Startup Founder**
