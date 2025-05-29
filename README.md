@@ -2,8 +2,6 @@
 
 <div align="center">
 
-![Let's Connect Logo](https://via.placeholder.com/300x100/3B82F6/FFFFFF?text=Let's+Connect)
-
 **The future of networking is here! No more forgotten business cards, no more awkward LinkedIn typing - just scan, talk, and let AI handle the rest.**
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-repo)
