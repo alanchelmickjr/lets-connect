@@ -11,91 +11,130 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
-
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  padding: 20px;
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Custom styles for the QR scanner */
+/* QR Scanner Overlay */
 .qr-scanner-overlay {
-  position: relative;
-}
-
-.qr-scanner-overlay::after {
-  content: '';
   position: absolute;
   top: 50%;
   left: 50%;
   width: 200px;
   height: 200px;
   margin: -100px 0 0 -100px;
-  border: 2px solid #3b82f6;
-  border-radius: 8px;
-  animation: qr-scan-animation 2s ease-in-out infinite;
+  border: 3px solid #3b82f6;
+  border-radius: 12px;
+  animation: qr-scan-pulse 2s ease-in-out infinite;
 }
 
-@keyframes qr-scan-animation {
+@keyframes qr-scan-pulse {
   0%, 100% {
-    opacity: 0.5;
-    transform: scale(0.9);
+    opacity: 0.6;
+    transform: scale(0.95);
   }
   50% {
     opacity: 1;
-    transform: scale(1.1);
+    transform: scale(1.05);
   }
 }
 
-/* Voice recording animation */
+/* Marquee Text Animation */
+.marquee-text {
+  animation: marquee 8s linear infinite;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Recording Animation */
 .recording-pulse {
-  animation: recording-animation 1.5s ease-in-out infinite;
+  animation: recording-glow 1.5s ease-in-out infinite;
 }
 
-@keyframes recording-animation {
+@keyframes recording-glow {
   0%, 100% {
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
     transform: scale(1);
-    opacity: 0.8;
   }
   50% {
-    transform: scale(1.1);
-    opacity: 1;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+    transform: scale(1.02);
   }
 }
 
-/* Mobile-first responsive design */
+/* Real-time streaming text */
+.streaming-text {
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: text-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes text-shimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Location Pin Animation */
+.location-pin {
+  animation: pin-bounce 2s ease-in-out infinite;
+}
+
+@keyframes pin-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Connection Success Animation */
+.connection-success {
+  animation: success-glow 3s ease-in-out;
+}
+
+@keyframes success-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Timer Display */
+.timer-display {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  color: #ef4444;
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+/* QR Code Display */
+.qr-code-display img {
+  border: 3px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile Optimizations */
 @media (max-width: 640px) {
   .container {
     padding: 1rem;
@@ -104,33 +143,118 @@ code {
   video {
     width: 100%;
     height: auto;
+    border-radius: 12px;
+  }
+  
+  .qr-scanner-overlay {
+    width: 150px;
+    height: 150px;
+    margin: -75px 0 0 -75px;
   }
 }
 
-/* Smooth transitions */
-.transition-smooth {
-  transition: all 0.3s ease-in-out;
-}
-
-/* Button hover effects */
+/* Button Hover Effects */
 .btn-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
 }
 
-/* Card shadows */
-.card-shadow {
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+/* Card Animations */
+.card-entrance {
+  animation: card-slide-up 0.5s ease-out;
 }
 
-/* Loading spinner */
-.spinner {
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #3b82f6;
+@keyframes card-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Real-time sync indicator */
+.sync-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 12px;
+  height: 12px;
+  background: #10b981;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  animation: sync-pulse 2s infinite;
+}
+
+@keyframes sync-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+/* AI Message Styling */
+.ai-message {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin: 16px 0;
+  animation: ai-glow 3s ease-in-out infinite;
+}
+
+@keyframes ai-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+  }
+}
+
+/* Event Badge */
+.event-badge {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Connection List Animation */
+.connection-item {
+  animation: connection-fade-in 0.5s ease-out;
+}
+
+@keyframes connection-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Loading States */
+.loading-spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
   animation: spin 1s linear infinite;
+  display: inline-block;
 }
 
 @keyframes spin {
@@ -138,102 +262,30 @@ code {
   100% { transform: rotate(360deg); }
 }
 
-/* Success/Error states */
-.success-state {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-}
-
-.error-state {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
-}
-
-/* AI message styling */
-.ai-message {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  color: white;
-  border-radius: 12px;
-  padding: 1rem;
-  margin: 1rem 0;
-}
-
-/* Connection status indicators */
-.status-connected {
-  background-color: #10b981;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.875rem;
-}
-
-.status-pending {
-  background-color: #f59e0b;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.875rem;
-}
-
-/* QR Code display */
-.qr-code-display img {
-  max-width: 200px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 1rem;
-  background: white;
-}
-
-/* Progressive Web App styles */
-.pwa-install-prompt {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
-  background: #1f2937;
-  color: white;
-  padding: 1rem;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 1000;
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .dark-mode {
-    background-color: #1f2937;
-    color: #f9fafb;
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .qr-scanner-overlay {
+    border-width: 4px;
   }
   
-  .dark-mode input,
-  .dark-mode select,
-  .dark-mode textarea {
-    background-color: #374151;
-    color: #f9fafb;
-    border-color: #4b5563;
-  }
-}
-
-/* Accessibility improvements */
-.focus-visible:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  .high-contrast {
+  .btn-hover {
     border: 2px solid;
   }
 }
 
-/* Reduced motion support */
+/* Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {
   * {
-    animation-duration: 0.01ms !important;
+    animation-duration: 0.1s !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0.1s !important;
+  }
+}
+
+/* Touch-friendly buttons */
+@media (hover: none) and (pointer: coarse) {
+  button {
+    min-height: 48px;
+    min-width: 48px;
   }
 }
