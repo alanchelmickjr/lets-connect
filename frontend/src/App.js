@@ -16,6 +16,7 @@ function App() {
   const [currentEvent, setCurrentEvent] = useState(null);
   const [scannedProfile, setScannedProfile] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingMode, setRecordingMode] = useState('introduction'); // 'introduction' or 'conversation'
   const [transcript, setTranscript] = useState('');
   const [streamingText, setStreamingText] = useState('');
   const [aiMessage, setAiMessage] = useState('');
@@ -23,6 +24,8 @@ function App() {
   const [location, setLocation] = useState(null);
   const [recordingTimer, setRecordingTimer] = useState(0);
   const [qrCodeData, setQrCodeData] = useState('');
+  const [linkedinToken, setLinkedinToken] = useState(null);
+  const [showMenu, setShowMenu] = useState(false);
   
   const videoRef = useRef(null);
   const qrScannerRef = useRef(null);
@@ -33,6 +36,7 @@ function App() {
   useEffect(() => {
     loadUserProfile();
     getCurrentLocation();
+    loadLinkedInToken();
     
     // Set up Gun.js real-time listeners
     gun.get('connections').on((data, key) => {
@@ -63,6 +67,13 @@ function App() {
     }
   };
 
+  const loadLinkedInToken = () => {
+    const token = localStorage.getItem('linkedinToken');
+    if (token) {
+      setLinkedinToken(token);
+    }
+  };
+
   const createProfile = async (profileData) => {
     try {
       const response = await axios.post(`${API}/profile`, profileData);
@@ -80,6 +91,27 @@ function App() {
     } catch (error) {
       console.error('Error creating profile:', error);
       throw error;
+    }
+  };
+
+  const connectLinkedIn = async () => {
+    try {
+      const response = await axios.get(`${API}/linkedin/auth-url`);
+      window.location.href = response.data.auth_url;
+    } catch (error) {
+      console.error('LinkedIn auth error:', error);
+    }
+  };
+
+  const sendLinkedInMessage = async () => {
+    if (!linkedinToken || !aiMessage) return;
+    
+    // Simulate LinkedIn message sending (replace with actual LinkedIn API call)
+    try {
+      alert(`LinkedIn message sent to ${scannedProfile.name}!\n\n"${aiMessage}"`);
+      resetToHome();
+    } catch (error) {
+      console.error('LinkedIn send error:', error);
     }
   };
 
@@ -108,7 +140,7 @@ function App() {
             const profileData = JSON.parse(result.data);
             setScannedProfile(profileData);
             stopQRScanning();
-            setCurrentStep('meetgreet');
+            setCurrentStep('recording-options');
           } catch (error) {
             console.error('Invalid QR code:', error);
           }
@@ -137,7 +169,7 @@ function App() {
     }
   };
 
-  const startMeetGreetRecording = async () => {
+  const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
@@ -146,12 +178,14 @@ function App() {
       setRecordingTimer(0);
       setStreamingText('');
 
-      // Start 30-second timer
+      // Set timer based on recording mode
+      const maxTime = recordingMode === 'introduction' ? 30 : 120; // 30s for intro, 2min for conversation
+      
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTimer(prev => {
-          if (prev >= 30) {
-            stopMeetGreetRecording();
-            return 30;
+          if (prev >= maxTime) {
+            stopRecording();
+            return maxTime;
           }
           return prev + 1;
         });
@@ -166,7 +200,7 @@ function App() {
         
         // Transcribe audio
         const formData = new FormData();
-        formData.append('audio_file', audioBlob, 'meetgreet.wav');
+        formData.append('audio_file', audioBlob, 'recording.wav');
         
         try {
           const response = await axios.post(`${API}/transcribe`, formData);
@@ -177,8 +211,11 @@ function App() {
           await generateAndSendMessage(fullTranscript);
         } catch (error) {
           console.error('Transcription error:', error);
-          setTranscript("Hi, nice meeting you at " + (currentEvent?.name || "the event") + "!");
-          await generateAndSendMessage("Brief introduction exchanged");
+          const fallbackText = recordingMode === 'introduction' 
+            ? `Hi, nice meeting you at ${currentEvent?.name || "the event"}!`
+            : `Great conversation at ${currentEvent?.name || "the event"}. Let's stay in touch!`;
+          setTranscript(fallbackText);
+          await generateAndSendMessage(fallbackText);
         }
         
         stream.getTracks().forEach(track => track.stop());
@@ -194,7 +231,7 @@ function App() {
     }
   };
 
-  const stopMeetGreetRecording = () => {
+  const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -205,13 +242,23 @@ function App() {
   };
 
   const simulateStreamingTranscription = () => {
-    const phrases = [
+    const introPhrases = [
       "Hi, nice to meet you...",
       "I'm from XYZ company...", 
       "What brings you to this event?",
-      "That sounds interesting...",
-      "We should connect on LinkedIn..."
+      "That sounds interesting..."
     ];
+    
+    const conversationPhrases = [
+      "Let me tell you about our project...",
+      "We're working on innovative solutions...",
+      "I'd love to hear your thoughts on...",
+      "Have you experienced similar challenges?",
+      "This could be a great collaboration...",
+      "Let's exchange contact information..."
+    ];
+    
+    const phrases = recordingMode === 'introduction' ? introPhrases : conversationPhrases;
     
     let phraseIndex = 0;
     const interval = setInterval(() => {
@@ -221,7 +268,7 @@ function App() {
       } else {
         clearInterval(interval);
       }
-    }, 3000);
+    }, recordingMode === 'introduction' ? 3000 : 5000);
   };
 
   const generateAndSendMessage = async (conversationText) => {
@@ -232,9 +279,9 @@ function App() {
         contact_company: scannedProfile.company || 'Company',
         event_name: currentEvent?.name || 'Event',
         event_type: 'Networking Event',
-        person_category: 'New Connection',
+        person_category: recordingMode === 'introduction' ? 'New Connection' : 'Potential Collaborator',
         voice_transcript: conversationText,
-        notes: `Met at ${currentEvent?.name || 'event'} - ${new Date().toLocaleDateString()}`
+        notes: `${recordingMode === 'introduction' ? 'Brief introduction' : 'Detailed conversation'} at ${currentEvent?.name || 'event'} - ${new Date().toLocaleDateString()}`
       };
 
       const response = await axios.post(`${API}/generate-message`, messageData);
@@ -251,9 +298,10 @@ function App() {
         contact_company: scannedProfile.company,
         event_name: currentEvent?.name || 'Event',
         event_type: 'Networking Event',
-        person_category: 'New Connection',
+        person_category: recordingMode === 'introduction' ? 'New Connection' : 'Potential Collaborator',
         voice_transcript: conversationText,
         ai_message: response.data.ai_message,
+        recording_mode: recordingMode,
         location: location,
         created_at: new Date().toISOString()
       };
@@ -264,9 +312,12 @@ function App() {
       // Sync to Gun.js for real-time updates
       gun.get('connections').get(connectionData.id).put(connectionData);
       
+      setCurrentStep('message-ready');
+      
     } catch (error) {
       console.error('Error generating message:', error);
       setAiMessage(`Hi ${scannedProfile.name}, great meeting you at ${currentEvent?.name || 'the event'}! Let's stay connected.`);
+      setCurrentStep('message-ready');
     }
   };
 
@@ -277,12 +328,171 @@ function App() {
     setStreamingText('');
     setAiMessage('');
     setRecordingTimer(0);
+    setRecordingMode('introduction');
   };
 
-  // Profile Creation Component
+  // Navigation Menu Component
+  const NavigationMenu = () => (
+    <div className={`fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-50 ${showMenu ? 'block' : 'hidden'}`}>
+      <div className="bg-white w-80 h-full shadow-xl">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold">Menu</h2>
+            <button onClick={() => setShowMenu(false)} className="text-gray-500 text-2xl">&times;</button>
+          </div>
+          
+          <div className="space-y-4">
+            <button onClick={() => { setCurrentStep('home'); setShowMenu(false); }} 
+                    className="w-full text-left p-3 hover:bg-gray-100 rounded-lg">
+              🏠 Home
+            </button>
+            <button onClick={() => { setCurrentStep('profile'); setShowMenu(false); }} 
+                    className="w-full text-left p-3 hover:bg-gray-100 rounded-lg">
+              👤 Edit Profile
+            </button>
+            <button onClick={() => { setCurrentStep('event'); setShowMenu(false); }} 
+                    className="w-full text-left p-3 hover:bg-gray-100 rounded-lg">
+              📍 Set Event
+            </button>
+            <button onClick={() => { setCurrentStep('connections'); setShowMenu(false); }} 
+                    className="w-full text-left p-3 hover:bg-gray-100 rounded-lg">
+              🤝 My Connections
+            </button>
+            {!linkedinToken && (
+              <button onClick={connectLinkedIn} 
+                      className="w-full text-left p-3 hover:bg-gray-100 rounded-lg">
+                🔗 Connect LinkedIn
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Recording Options Component
+  const RecordingOptions = () => (
+    <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">Choose Recording Type</h2>
+      
+      {scannedProfile && (
+        <div className="mb-6 p-4 bg-green-50 rounded-lg">
+          <h3 className="font-semibold text-green-800">Connecting with:</h3>
+          <p className="text-green-700">{scannedProfile.name}</p>
+          <p className="text-green-600 text-sm">{scannedProfile.title} at {scannedProfile.company}</p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <button
+          onClick={() => { setRecordingMode('introduction'); setCurrentStep('meetgreet'); }}
+          className="w-full p-4 bg-blue-50 border-2 border-blue-200 rounded-lg hover:bg-blue-100 text-left"
+        >
+          <div className="font-semibold text-blue-800">🤝 Quick Introduction</div>
+          <div className="text-blue-600 text-sm">30 seconds - Perfect for brief meet & greet</div>
+        </button>
+        
+        <button
+          onClick={() => { setRecordingMode('conversation'); setCurrentStep('meetgreet'); }}
+          className="w-full p-4 bg-purple-50 border-2 border-purple-200 rounded-lg hover:bg-purple-100 text-left"
+        >
+          <div className="font-semibold text-purple-800">💬 Full Conversation</div>
+          <div className="text-purple-600 text-sm">2 minutes - For detailed discussions</div>
+        </button>
+      </div>
+    </div>
+  );
+
+  // Message Ready Component
+  const MessageReady = () => (
+    <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">🎉 Connection Ready!</h2>
+      
+      <div className="mb-4 p-4 bg-green-50 rounded-lg">
+        <h3 className="font-semibold text-green-800">Connected with:</h3>
+        <p className="text-green-700">{scannedProfile.name}</p>
+      </div>
+
+      {aiMessage && (
+        <div className="mb-6 p-4 bg-purple-50 rounded-lg">
+          <h4 className="font-semibold text-purple-800">LinkedIn Message:</h4>
+          <p className="text-purple-700 text-sm mb-3">{aiMessage}</p>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {linkedinToken ? (
+          <button
+            onClick={sendLinkedInMessage}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 text-lg"
+          >
+            📤 Send LinkedIn Message
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={() => navigator.clipboard.writeText(aiMessage)}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
+            >
+              📋 Copy Message
+            </button>
+            <button
+              onClick={connectLinkedIn}
+              className="w-full bg-blue-800 text-white py-3 rounded-lg hover:bg-blue-900"
+            >
+              🔗 Connect LinkedIn & Send
+            </button>
+          </>
+        )}
+        
+        <button
+          onClick={resetToHome}
+          className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
+        >
+          ✅ Done - New Connection
+        </button>
+      </div>
+    </div>
+  );
+
+  // Connections List Component
+  const ConnectionsList = () => (
+    <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">My Connections</h2>
+      
+      {connections.length === 0 ? (
+        <p className="text-gray-500 text-center py-8">No connections yet. Start networking!</p>
+      ) : (
+        <div className="space-y-3">
+          {connections.map(conn => (
+            <div key={conn.id} className="p-4 bg-gray-50 rounded-lg">
+              <div className="font-medium">{conn.contact_name}</div>
+              <div className="text-sm text-gray-600">{conn.contact_title} at {conn.contact_company}</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {conn.event_name} • {conn.recording_mode || 'meet & greet'}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      <button
+        onClick={() => setCurrentStep('home')}
+        className="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
+      >
+        Back to Home
+      </button>
+    </div>
+  );
+
+  // Keep existing components but add menu button
   const ProfileForm = () => {
     const [formData, setFormData] = useState({
-      name: '', linkedin_url: '', email: '', title: '', company: ''
+      name: userProfile?.name || '', 
+      linkedin_url: userProfile?.linkedin_url || '', 
+      email: userProfile?.email || '', 
+      title: userProfile?.title || '', 
+      company: userProfile?.company || ''
     });
 
     const handleSubmit = async (e) => {
@@ -297,7 +507,9 @@ function App() {
 
     return (
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Your Profile</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+          {userProfile ? 'Edit Profile' : 'Create Your Profile'}
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text" placeholder="Full Name" required
@@ -330,14 +542,13 @@ function App() {
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
           <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700">
-            Create Profile
+            {userProfile ? 'Update Profile' : 'Create Profile'}
           </button>
         </form>
       </div>
     );
   };
 
-  // Event Setup Component
   const EventSetup = () => {
     const [eventName, setEventName] = useState('');
 
@@ -372,7 +583,6 @@ function App() {
     );
   };
 
-  // QR Scanner Component
   const QRScanner = () => (
     <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-4">Scan Contact's QR Code</h2>
@@ -389,89 +599,73 @@ function App() {
     </div>
   );
 
-  // Meet & Greet Recording Component
-  const MeetGreetRecording = () => (
-    <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Meet & Greet Recording</h2>
-      
-      {scannedProfile && (
-        <div className="mb-4 p-4 bg-green-50 rounded-lg">
-          <h3 className="font-semibold text-green-800">Connecting with:</h3>
-          <p className="text-green-700">{scannedProfile.name}</p>
-          <p className="text-green-600 text-sm">{scannedProfile.title} at {scannedProfile.company}</p>
-        </div>
-      )}
-
-      {currentEvent && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-blue-700 text-sm">📍 {currentEvent.name}</p>
-        </div>
-      )}
-
-      <div className="text-center mb-4">
-        {!isRecording ? (
-          <button
-            onClick={startMeetGreetRecording}
-            className="bg-red-600 text-white px-8 py-4 rounded-full hover:bg-red-700 text-lg"
-          >
-            🎤 Start 30s Meet & Greet
-          </button>
-        ) : (
-          <div className="space-y-4">
-            <button
-              onClick={stopMeetGreetRecording}
-              className="bg-gray-600 text-white px-8 py-4 rounded-full hover:bg-gray-700 text-lg animate-pulse"
-            >
-              ⏹️ Stop Recording ({30 - recordingTimer}s)
-            </button>
-            
-            {streamingText && (
-              <div className="bg-gray-100 p-3 rounded-lg">
-                <div className="marquee-text text-gray-700 text-sm">
-                  {streamingText}
-                </div>
-              </div>
-            )}
+  const MeetGreetRecording = () => {
+    const maxTime = recordingMode === 'introduction' ? 30 : 120;
+    
+    return (
+      <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">
+          {recordingMode === 'introduction' ? '🤝 Quick Introduction' : '💬 Full Conversation'}
+        </h2>
+        
+        {scannedProfile && (
+          <div className="mb-4 p-4 bg-green-50 rounded-lg">
+            <h3 className="font-semibold text-green-800">Recording with:</h3>
+            <p className="text-green-700">{scannedProfile.name}</p>
+            <p className="text-green-600 text-sm">{scannedProfile.title} at {scannedProfile.company}</p>
           </div>
         )}
-      </div>
 
-      {transcript && (
-        <div className="mt-4 p-4 bg-green-50 rounded-lg">
-          <h4 className="font-semibold text-green-800">Conversation:</h4>
-          <p className="text-green-700 text-sm">{transcript}</p>
-        </div>
-      )}
-
-      {aiMessage && (
-        <div className="mt-4 p-4 bg-purple-50 rounded-lg">
-          <h4 className="font-semibold text-purple-800">LinkedIn Message Ready:</h4>
-          <p className="text-purple-700 text-sm">{aiMessage}</p>
-          <div className="mt-3 space-y-2">
-            <button
-              onClick={() => navigator.clipboard.writeText(aiMessage)}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-            >
-              📋 Copy Message
-            </button>
-            <button
-              onClick={resetToHome}
-              className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
-            >
-              ✅ Done - New Connection
-            </button>
+        {currentEvent && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-blue-700 text-sm">📍 {currentEvent.name}</p>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
 
-  // Home Screen
+        <div className="text-center mb-4">
+          {!isRecording ? (
+            <button
+              onClick={startRecording}
+              className="bg-red-600 text-white px-8 py-4 rounded-full hover:bg-red-700 text-lg"
+            >
+              🎤 Start {recordingMode === 'introduction' ? '30s' : '2min'} Recording
+            </button>
+          ) : (
+            <div className="space-y-4">
+              <button
+                onClick={stopRecording}
+                className="bg-gray-600 text-white px-8 py-4 rounded-full hover:bg-gray-700 text-lg animate-pulse"
+              >
+                ⏹️ Stop Recording ({maxTime - recordingTimer}s)
+              </button>
+              
+              {streamingText && (
+                <div className="bg-gray-100 p-3 rounded-lg">
+                  <div className="marquee-text text-gray-700 text-sm">
+                    {streamingText}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const HomeScreen = () => (
     <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Let's Connect</h1>
-        <p className="text-gray-600">AI-Powered Networking</p>
+      <div className="flex justify-between items-center mb-6">
+        <div className="text-center flex-1">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Let's Connect</h1>
+          <p className="text-gray-600">AI-Powered Networking</p>
+        </div>
+        <button 
+          onClick={() => setShowMenu(true)}
+          className="text-2xl text-gray-600 hover:text-gray-800"
+        >
+          ☰
+        </button>
       </div>
       
       {userProfile ? (
@@ -479,6 +673,7 @@ function App() {
           <div className="p-4 bg-blue-50 rounded-lg">
             <h3 className="font-semibold text-blue-800">Welcome, {userProfile.name}!</h3>
             <p className="text-blue-600 text-sm">{userProfile.title} at {userProfile.company}</p>
+            {linkedinToken && <p className="text-green-600 text-xs">✅ LinkedIn Connected</p>}
           </div>
 
           {currentEvent && (
@@ -493,13 +688,6 @@ function App() {
               <img src={qrCodeData} alt="QR Code" className="mx-auto max-w-32" />
             </div>
           )}
-          
-          <button
-            onClick={() => setCurrentStep('event')}
-            className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700"
-          >
-            📍 Set Event Location
-          </button>
           
           <button
             onClick={() => {
@@ -542,11 +730,16 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+      <NavigationMenu />
+      
       {currentStep === 'home' && <HomeScreen />}
       {currentStep === 'profile' && <ProfileForm />}
       {currentStep === 'event' && <EventSetup />}
       {currentStep === 'scan' && <QRScanner />}
+      {currentStep === 'recording-options' && <RecordingOptions />}
       {currentStep === 'meetgreet' && <MeetGreetRecording />}
+      {currentStep === 'message-ready' && <MessageReady />}
+      {currentStep === 'connections' && <ConnectionsList />}
     </div>
   );
 }
