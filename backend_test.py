@@ -4,6 +4,8 @@ import json
 import sys
 import time
 import uuid
+import os
+import base64
 
 class LetsConnectAPITester:
     def __init__(self, base_url):
@@ -12,6 +14,8 @@ class LetsConnectAPITester:
         self.tests_passed = 0
         self.user_id = None
         self.test_profile = None
+        self.connection_id = None
+        self.qr_code_data = None
 
     def run_test(self, name, method, endpoint, expected_status, data=None, files=None):
         """Run a single API test"""
@@ -30,6 +34,8 @@ class LetsConnectAPITester:
                     response = requests.post(url, files=files)
                 else:
                     response = requests.post(url, json=data, headers=headers)
+            elif method == 'PUT':
+                response = requests.put(url, json=data, headers=headers)
 
             success = response.status_code == expected_status
             if success:
@@ -143,14 +149,49 @@ class LetsConnectAPITester:
             # Verify it's a valid base64 image
             if response['qr_code'].startswith('data:image/png;base64,'):
                 print("✅ Valid QR code format")
+                self.qr_code_data = response['qr_code']
             else:
                 print("❌ Invalid QR code format")
                 success = False
         
         return success
 
-    def test_ai_message_generation(self):
-        """Test AI message generation"""
+    def test_transcribe_audio(self):
+        """Test audio transcription"""
+        # Create a simple test audio file
+        test_audio_path = "/app/test_audio.txt"
+        with open(test_audio_path, "w") as f:
+            f.write("Test audio content")
+        
+        try:
+            # Create a dummy audio file for testing
+            with open(test_audio_path, "rb") as f:
+                files = {
+                    "audio_file": ("test_audio.wav", f, "audio/wav")
+                }
+                
+                success, response = self.run_test(
+                    "Transcribe Audio",
+                    "POST",
+                    "api/transcribe",
+                    200,
+                    files=files
+                )
+                
+                if success:
+                    if 'transcript' in response:
+                        print(f"Transcription: {response['transcript']}")
+                    else:
+                        print("❌ No transcript in response")
+                        success = False
+                
+                return success
+        except Exception as e:
+            print(f"❌ Failed to test transcription: {str(e)}")
+            return False
+
+    def test_ai_message_generation_with_event_context(self):
+        """Test AI message generation with event context"""
         if not self.test_profile:
             print("❌ Cannot test AI message generation: No test profile available")
             return False
@@ -159,15 +200,19 @@ class LetsConnectAPITester:
             "contact_name": self.test_profile['name'],
             "contact_title": self.test_profile['title'],
             "contact_company": self.test_profile['company'],
-            "event_name": "Test Conference",
+            "event_name": "Tech Conference 2025",
             "event_type": "Conference",
             "person_category": "Potential Collaborator",
-            "voice_transcript": "We discussed potential collaboration on AI projects.",
-            "notes": "Follow up next week about the project proposal."
+            "voice_transcript": "We discussed potential collaboration on AI projects and exchanged ideas about the latest LLM advancements.",
+            "notes": "Follow up next week about the project proposal.",
+            "location": {
+                "lat": 37.7749,
+                "lng": -122.4194
+            }
         }
         
         success, response = self.run_test(
-            "Generate AI Message",
+            "Generate AI Message with Event Context",
             "POST",
             "api/generate-message",
             200,
@@ -175,12 +220,12 @@ class LetsConnectAPITester:
         )
         
         if success and 'ai_message' in response:
-            print(f"AI Message: {response['ai_message']}")
+            print(f"AI Message with Event Context: {response['ai_message']}")
         
         return success
 
-    def test_create_connection(self):
-        """Test creating a connection"""
+    def test_create_connection_with_location(self):
+        """Test creating a connection with location data"""
         if not self.user_id or not self.test_profile:
             print("❌ Cannot test create_connection: No user ID or test profile available")
             return False
@@ -199,11 +244,36 @@ class LetsConnectAPITester:
         }
         
         success, response = self.run_test(
-            "Create Connection",
+            "Create Connection with Location",
             "POST",
             "api/connection",
             200,
             data=connection_data
+        )
+        
+        if success:
+            self.connection_id = response.get('id')
+            print(f"Created connection with ID: {self.connection_id}")
+        
+        return success
+
+    def test_update_connection(self):
+        """Test updating a connection with voice transcript and AI message"""
+        if not self.connection_id:
+            print("❌ Cannot test update_connection: No connection ID available")
+            return False
+            
+        update_data = {
+            "voice_transcript": "We discussed AI trends and potential collaboration opportunities.",
+            "ai_message": "Hi John, great meeting you at Tech Conference 2025! Let's connect to discuss those AI trends further."
+        }
+        
+        success, response = self.run_test(
+            "Update Connection",
+            "PUT",
+            f"api/connection/{self.connection_id}",
+            200,
+            data=update_data
         )
         
         return success
@@ -243,8 +313,10 @@ def main():
         tester.test_create_profile,
         tester.test_get_profile,
         tester.test_qr_code_generation,
-        tester.test_ai_message_generation,
-        tester.test_create_connection,
+        tester.test_transcribe_audio,
+        tester.test_ai_message_generation_with_event_context,
+        tester.test_create_connection_with_location,
+        tester.test_update_connection,
         tester.test_get_connections
     ]
     
