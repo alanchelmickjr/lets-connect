@@ -1,7 +1,7 @@
 # 🚀 Let's Connect - AI-Powered Networking Revolution
-
+# Alpha Version 0.01 - Under Development 🚧
 <div align="center">
-Alpha Version 0.01 - Under Development 🚧
+
 **The future of networking is here! No more forgotten business cards, no more awkward LinkedIn typing - just scan, talk, and let AI handle the rest.**
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-repo)
